@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package.json if it exists
+COPY package.json* ./
+
+# Install basic Node.js test dependencies
+RUN npm init -y 2>/dev/null || true
+
+# Copy test file
+COPY throttleGenerator.test.mjs ./
+
+# Run the test
+CMD ["node", "--test", "throttleGenerator.test.mjs"]

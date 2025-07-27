@@ -27,6 +27,9 @@ const DEFAULT_REMOTE_VM_SETTINGS = {
   validateVhdStreams: false,
   vmTimeout: 0,
 }
+console.log(
+      `[DEBUG] Starting backup runner. Job ID: ${job.id}, Job Mode: ${job.mode}, Speed Limit (maxExportRate): ${settings.maxExportRate}`
+    )
 
 export const VmsRemote = class RemoteVmsBackupRunner extends Abstract {
   _computeBaseSettings(config, job) {
@@ -41,8 +44,9 @@ export const VmsRemote = class RemoteVmsBackupRunner extends Abstract {
     const schedule = this._schedule
     const settings = this._settings
 
-    const throttleGenerator = new Throttle()
-
+    const throttleGenerator = settings.maxExportRate > 0
+      ? new Throttle(settings.maxExportRate * 1024 * 1024)
+      : undefined
     const config = this._config
 
     await Disposable.use(

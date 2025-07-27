@@ -177,7 +177,7 @@ export class IncrementalRemoteWriter extends MixinRemoteWriter(AbstractIncrement
     }
   }
 
-  async _transfer($defer, { isVhdDifferencing, timestamp, deltaExport, vm, vmSnapshot }) {
+  async _transfer($defer, { isVhdDifferencing, timestamp, deltaExport, vm, vmSnapshot, throttleGenerator }) {
     const adapter = this._adapter
     const job = this._job
     const scheduleId = this._scheduleId
@@ -234,6 +234,7 @@ export class IncrementalRemoteWriter extends MixinRemoteWriter(AbstractIncrement
             checksum: false,
             validator: tmpPath => checkVhd(handler, tmpPath),
             writeBlockConcurrency: this._config.writeBlockConcurrency,
+            throttle: throttleGenerator,
           })
           size = size + disk.getNbGeneratedBlock() * disk.getBlockSize()
         },

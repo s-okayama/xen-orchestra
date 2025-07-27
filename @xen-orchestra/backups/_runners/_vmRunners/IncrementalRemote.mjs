@@ -97,6 +97,7 @@ class IncrementalRemoteVmBackupRunner extends AbstractRemote {
             timestamp: metadata.timestamp,
             vm: metadata.vm,
             vmSnapshot: metadata.vmSnapshot,
+            throttleGenerator: this._throttleGenerator,
           }),
         'writer.transfer()'
       )

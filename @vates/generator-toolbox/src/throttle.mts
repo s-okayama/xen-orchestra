@@ -11,6 +11,8 @@ import assert from 'node:assert'
  */
 export class Throttle {
   #previousSlot = 0
+  #startTime = 0
+  #totalBytesProcessed = 0
   #bytesPerSecond: number | (() => number)
   get speed(): number {
     let speed: number
@@ -30,19 +32,35 @@ export class Throttle {
     assert.notStrictEqual(length, undefined, `throttled stream need to expose a length property }`)
     assert.ok(length > 0, `throttled stream must expose a positive length property , ${length} given }`)
 
-    const previous = this.#previousSlot
-    const nextSlot = Math.round(previous + (length * 1000) / this.speed)
-    if (nextSlot < Date.now()) {
-      // we're above the limit, go now
-      this.#previousSlot = Date.now()
+    const now = Date.now()
+
+    // Initialize on first call
+    if (this.#startTime === 0) {
+      this.#startTime = now
+      this.#previousSlot = now
+      this.#totalBytesProcessed = length
       return {}
     }
+
+    // Calculate when this chunk should be processed based on total throughput
+    this.#totalBytesProcessed += length
+    const elapsedTime = now - this.#startTime
+    const expectedTime = (this.#totalBytesProcessed * 1000) / this.speed
+
+    if (expectedTime <= elapsedTime) {
+      // We can process immediately
+      this.#previousSlot = now
+      return {}
+    }
+
+    // Need to wait
+    const waitTime = expectedTime - elapsedTime
+    const nextSlot = now + waitTime
     this.#previousSlot = nextSlot
-    // wait till the next slot
-    // it won't be extremely precise since the event loop is not
+
     let timeout: ReturnType<typeof setTimeout> | undefined = undefined
     const promise = new Promise(function (resolve) {
-      timeout = setTimeout(resolve, nextSlot - Date.now())
+      timeout = setTimeout(resolve, waitTime)
     })
     return { promise, timeout }
   }

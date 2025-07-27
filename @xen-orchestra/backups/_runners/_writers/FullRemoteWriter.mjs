@@ -9,22 +9,29 @@ export class FullRemoteWriter extends MixinRemoteWriter(AbstractFullWriter) {
   constructor(props) {
     super(props)
 
+    // Task.wrapFnをrunメソッドに戻す
     this.run = Task.wrapFn(
       {
         name: 'export',
         data: {
           id: props.remoteId,
           type: 'remote',
-
-          // necessary?
           isFull: true,
         },
       },
-      this.run
+      this.run.bind(this)
     )
   }
 
-  async _run({ maxStreamLength, timestamp, sizeContainer, stream, streamLength, vm, vmSnapshot }) {
+  // runメソッドで直接_runを呼び出す
+  async run(args) {
+    return this._run(args)
+  }
+
+  async _run({ maxStreamLength, timestamp, sizeContainer, stream, streamLength, vm, vmSnapshot, throttleGenerator }) {
+    console.log('[DEBUG] FullRemoteWriter._run - throttleGenerator:', throttleGenerator)
+    console.log('[DEBUG] FullRemoteWriter._run - typeof throttleGenerator:', typeof throttleGenerator)
+
     const settings = this._settings
     const job = this._job
     const scheduleId = this._scheduleId
@@ -65,11 +72,17 @@ export class FullRemoteWriter extends MixinRemoteWriter(AbstractFullWriter) {
     }
 
     await Task.run({ name: 'transfer' }, async () => {
-      await adapter.outputStream(dataFilename, stream, {
+      const outputStreamOptions = {
         maxStreamLength,
         streamLength,
         validator: tmpPath => adapter.isValidXva(tmpPath),
-      })
+      }
+
+      if (throttleGenerator) {
+        outputStreamOptions.throttle = throttleGenerator
+      }
+
+      await adapter.outputStream(dataFilename, stream, outputStreamOptions)
       return { size: sizeContainer.size }
     })
     metadata.size = sizeContainer.size

@@ -55,8 +55,7 @@ export const VmsXapi = class VmsXapiBackupRunner extends Abstract {
     const schedule = this._schedule
     const settings = this._settings
 
-    const throttleGenerator = new Throttle()
-
+    const throttleGenerator = new Throttle(settings.maxExportRate > 0 ? settings.maxExportRate * 1024 * 1024 : undefined)
     const config = this._config
 
     await Disposable.use(
